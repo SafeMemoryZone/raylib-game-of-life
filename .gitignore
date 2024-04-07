@@ -31,8 +31,8 @@
 *.out
 *.app
 
-# Build dir
 out/
+.cache/
 
 # Config
 compile_commands.json
