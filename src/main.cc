@@ -2,6 +2,7 @@
 #include <array>
 #include <cmath>
 #include <iostream>
+#include <sstream>
 #include <utility>
 
 constexpr int kCellSize = 10;
@@ -10,9 +11,24 @@ constexpr int kColCount = 100;
 constexpr Color kCellCol = Color{64, 224, 208, 255};
 
 bool game_paused = true;
-std::array<std::array<bool, kColCount>, kRowCount> cells;
+std::array<std::array<bool, kColCount>, kRowCount> cells{};
 float curr_time = 0;
 float tick_delay = 0.5;
+std::string curr_status = "PAUSED";
+
+std::string FloatToStr(float value) {
+  std::ostringstream oss;
+  oss << std::fixed << value;
+  std::string str = oss.str();
+
+  str.erase(str.find_last_not_of('0') + 1, std::string::npos);
+
+  if (str.back() == '.') {
+    str.pop_back();
+  }
+
+  return str;
+}
 
 int CountNeighbours(int row_idx, int col_idx) {
   static std::array<std::pair<int, int>, 8> neighbour_offs = {
@@ -61,6 +77,10 @@ void RenderFrame() {
     DrawLine(0, curr_row_idx * kCellSize, kColCount * kCellSize,
              curr_row_idx * kCellSize, WHITE);
   }
+
+  int text_size = MeasureText(curr_status.c_str(), 80);
+  DrawText(curr_status.c_str(), kColCount * kCellSize - text_size - 10,
+           kRowCount * kCellSize - 80, 80, GREEN);
   EndDrawing();
 }
 
@@ -74,14 +94,6 @@ void Update() {
       row.fill(false);
     }
     game_paused = true;
-  }
-
-  else if (IsKeyPressed(KEY_RIGHT)) {
-    tick_delay /= 2;
-  }
-
-  else if (IsKeyPressed(KEY_LEFT)) {
-    tick_delay *= 2;
   }
 
   else if (game_paused) {
@@ -100,6 +112,16 @@ void Update() {
 
     return;
   }
+
+  else if (IsKeyPressed(KEY_RIGHT)) {
+    tick_delay /= 2;
+  }
+
+  else if (IsKeyPressed(KEY_LEFT)) {
+    tick_delay *= 2;
+  }
+
+  curr_status = game_paused ? "PAUSED" : "x" + FloatToStr(0.5 / tick_delay);
 
   if (curr_time < tick_delay) {
     curr_time += GetFrameTime();
