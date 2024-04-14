@@ -27,14 +27,8 @@ endif()
 add_subdirectory(src)
 
 target_link_libraries(${PROJECT_NAME} raylib)
-target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Werror -Og -fsanitize=address -fsanitize=undefined)
-target_link_options(${PROJECT_NAME} PRIVATE -fsanitize=address -fsanitize=undefined)
-
-
-if (${PLATFORM} STREQUAL "Web")
-    
-    set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".html")
-endif()
+# target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Werror -Og -fsanitize=address -fsanitize=undefined)
+# target_link_options(${PROJECT_NAME} PRIVATE -fsanitize=address -fsanitize=undefined)
 
 if (APPLE)
     target_link_libraries(${PROJECT_NAME} "-framework IOKit")
