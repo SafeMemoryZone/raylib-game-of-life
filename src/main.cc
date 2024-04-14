@@ -10,11 +10,12 @@ constexpr int kRowCount = 50;
 constexpr int kColCount = 100;
 constexpr Color kCellCol = Color{64, 224, 208, 255};
 
-bool game_paused = true;
+Camera2D camera{};
+bool game_paused;
 std::array<std::array<bool, kColCount>, kRowCount> cells{};
-float curr_time = 0;
-float tick_delay = 0.5;
-std::string curr_status = "PAUSED";
+float curr_time;
+float tick_delay;
+std::string curr_status;
 
 std::string FloatToStr(float value) {
   std::ostringstream oss;
@@ -55,6 +56,7 @@ int CountNeighbours(int row_idx, int col_idx) {
 
 void RenderFrame() {
   BeginDrawing();
+  BeginMode2D(camera);
   ClearBackground(BLACK);
 
   int row_idx = 0;
@@ -78,6 +80,7 @@ void RenderFrame() {
              curr_row_idx * kCellSize, WHITE);
   }
 
+  EndMode2D();
   int text_size = MeasureText(curr_status.c_str(), 80);
   DrawText(curr_status.c_str(), kColCount * kCellSize - text_size - 10,
            kRowCount * kCellSize - 80, 80, GREEN);
@@ -89,20 +92,53 @@ void Update() {
     game_paused = !game_paused;
   }
 
-  else if (IsKeyPressed(KEY_C)) {
+  curr_status = game_paused ? "PAUSED" : "x" + FloatToStr(0.5 / tick_delay);
+
+  if (IsKeyPressed(KEY_C)) {
     for (auto &row : cells) {
       row.fill(false);
     }
     game_paused = true;
   }
 
-  else if (game_paused) {
+  if (IsKeyDown(KEY_W)) {
+    camera.target.y -= 3;
+  }
+
+  if (IsKeyDown(KEY_A)) {
+    camera.target.x -= 3;
+  }
+
+  if (IsKeyDown(KEY_S)) {
+    camera.target.y += 3;
+  }
+
+  if (IsKeyDown(KEY_D)) {
+    camera.target.x += 3;
+  }
+
+  if (auto scroll = GetMouseWheelMove()) {
+    float new_zoom = camera.zoom + scroll * 0.1;
+    if (new_zoom > 1.0f && new_zoom < 10.0f) {
+      Vector2 mouse_pos = GetMousePosition();
+      Vector2 world_pos_before = GetScreenToWorld2D(mouse_pos, camera);
+
+      camera.zoom = new_zoom;
+
+      Vector2 world_pos_after = GetScreenToWorld2D(mouse_pos, camera);
+      camera.target.x += (world_pos_before.x - world_pos_after.x);
+      camera.target.y += (world_pos_before.y - world_pos_after.y);
+    }
+  }
+
+  if (game_paused) {
     if (!IsMouseButtonDown(MOUSE_BUTTON_LEFT) &&
         !IsMouseButtonDown(MOUSE_BUTTON_RIGHT))
       return;
 
-    int row_idx = floor(GetMouseY() / kCellSize);
-    int col_idx = floor(GetMouseX() / kCellSize);
+    Vector2 pos = GetScreenToWorld2D(GetMousePosition(), camera);
+    int row_idx = floor(pos.y / kCellSize);
+    int col_idx = floor(pos.x / kCellSize);
 
     if (row_idx >= kRowCount || col_idx >= kColCount)
       return;
@@ -113,15 +149,13 @@ void Update() {
     return;
   }
 
-  else if (IsKeyPressed(KEY_RIGHT)) {
+  if (IsKeyPressed(KEY_RIGHT)) {
     tick_delay /= 2;
   }
 
   else if (IsKeyPressed(KEY_LEFT)) {
     tick_delay *= 2;
   }
-
-  curr_status = game_paused ? "PAUSED" : "x" + FloatToStr(0.5 / tick_delay);
 
   if (curr_time < tick_delay) {
     curr_time += GetFrameTime();
@@ -150,9 +184,18 @@ void Update() {
   cells = std::move(updated_cells);
 }
 
+void InitGame() {
+  game_paused = true;
+  curr_time = 0;
+  tick_delay = 0.5;
+  curr_status = "PAUSED";
+  camera.zoom = 1.0;
+}
+
 int main(void) {
   InitWindow(kColCount * kCellSize, kRowCount * kCellSize, "Game of Life");
   SetTargetFPS(GetMonitorRefreshRate(GetCurrentMonitor()));
+  InitGame();
 
   while (!WindowShouldClose()) {
     Update();
